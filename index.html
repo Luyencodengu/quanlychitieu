@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#135f73">
+  <meta name="description" content="Ứng dụng quản lý số tiền hiện có và các khoản chi hằng ngày.">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <title>Sổ Chi Tiêu – Quản lý chi tiêu cá nhân</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="app-shell">
+    <header class="topbar">
+      <a class="brand" href="#top" aria-label="Trang chủ Sổ Chi Tiêu">
+        <span class="brand-mark" aria-hidden="true">₫</span>
+        <span>
+          <strong>Sổ Chi Tiêu</strong>
+          <small>Quản lý tiền đơn giản hơn</small>
+        </span>
+      </a>
+      <span class="storage-badge">
+        <span class="status-dot" aria-hidden="true"></span>
+        Đã lưu trên thiết bị
+      </span>
+    </header>
+
+    <section class="hero" id="top">
+      <div>
+        <p class="eyebrow">TỔNG QUAN TÀI CHÍNH</p>
+        <h1>Hôm nay bạn đã chi tiêu thế nào?</h1>
+        <p class="hero-copy">Ghi lại từng khoản chi để luôn biết chính xác số tiền còn lại.</p>
+      </div>
+      <div class="today" id="todayLabel" aria-label="Ngày hôm nay"></div>
+    </section>
+
+    <section class="summary-grid" aria-label="Tổng quan số tiền">
+      <article class="summary-card balance-card">
+        <div class="card-icon" aria-hidden="true">◎</div>
+        <div>
+          <p>Số dư hiện tại</p>
+          <strong id="currentBalance">0 ₫</strong>
+          <span id="balanceHint">Hãy nhập số tiền bạn đang có</span>
+        </div>
+      </article>
+      <article class="summary-card">
+        <div class="card-icon expense-icon" aria-hidden="true">↗</div>
+        <div>
+          <p>Tổng đã chi</p>
+          <strong id="totalExpense">0 ₫</strong>
+          <span id="expenseHint">Chưa có khoản chi nào</span>
+        </div>
+      </article>
+      <article class="summary-card">
+        <div class="card-icon count-icon" aria-hidden="true">≡</div>
+        <div>
+          <p>Số giao dịch</p>
+          <strong id="transactionCount">0</strong>
+          <span>Khoản chi đã ghi lại</span>
+        </div>
+      </article>
+    </section>
+
+    <section class="workspace-grid">
+      <div class="forms-column">
+        <article class="panel">
+          <div class="panel-heading">
+            <span class="heading-icon blue" aria-hidden="true">₫</span>
+            <div>
+              <h2>Tiền hiện có</h2>
+              <p>Nhập tổng số tiền bạn đang sở hữu.</p>
+            </div>
+          </div>
+          <form id="balanceForm" novalidate>
+            <label for="balanceInput">Số tiền hiện có</label>
+            <div class="money-input">
+              <input id="balanceInput" name="balance" type="number" min="0" step="1000"
+                     inputmode="numeric" placeholder="Ví dụ: 5.000.000" required>
+              <span>VNĐ</span>
+            </div>
+            <p class="field-error" id="balanceError" role="alert"></p>
+            <button class="button primary" type="submit">Cập nhật số tiền</button>
+          </form>
+        </article>
+
+        <article class="panel">
+          <div class="panel-heading">
+            <span class="heading-icon coral" aria-hidden="true">＋</span>
+            <div>
+              <h2>Thêm khoản chi</h2>
+              <p>Ghi lại nội dung và số tiền vừa chi.</p>
+            </div>
+          </div>
+          <form id="expenseForm" novalidate>
+            <label for="expenseName">Nội dung chi</label>
+            <input id="expenseName" name="name" type="text" maxlength="60"
+                   placeholder="Ví dụ: Ăn sáng, đổ xăng..." autocomplete="off" required>
+
+            <label for="expenseAmount">Số tiền đã chi</label>
+            <div class="money-input">
+              <input id="expenseAmount" name="amount" type="number" min="1" step="1000"
+                     inputmode="numeric" placeholder="Ví dụ: 50.000" required>
+              <span>VNĐ</span>
+            </div>
+
+            <label for="expenseDate">Ngày chi</label>
+            <input id="expenseDate" name="date" type="date" required>
+            <p class="field-error" id="expenseError" role="alert"></p>
+            <button class="button accent" type="submit">＋ Thêm khoản chi</button>
+          </form>
+        </article>
+      </div>
+
+      <article class="panel history-panel">
+        <div class="history-heading">
+          <div class="panel-heading compact">
+            <span class="heading-icon violet" aria-hidden="true">↻</span>
+            <div>
+              <h2>Lịch sử chi tiêu</h2>
+              <p>Các khoản chi mới nhất của bạn.</p>
+            </div>
+          </div>
+          <button class="text-button" id="clearAllButton" type="button" hidden>Xóa tất cả</button>
+        </div>
+
+        <div class="empty-state" id="emptyState">
+          <div class="empty-illustration" aria-hidden="true">✓</div>
+          <h3>Chưa có khoản chi nào</h3>
+          <p>Khoản chi mới sẽ xuất hiện tại đây.</p>
+        </div>
+
+        <div class="transaction-list" id="transactionList" aria-live="polite"></div>
+      </article>
+    </section>
+
+    <footer>
+      <p>Dữ liệu được lưu riêng trên thiết bị này.</p>
+      <p>© 2026 Sổ Chi Tiêu</p>
+    </footer>
+  </main>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <script src="script.js"></script>
+</body>
+</html>

@@ -1,10 +1,19 @@
 const STORAGE_KEY = "so-chi-tieu-v1";
+const CATEGORY_KEY = "expense-categories";
 
+let categories = JSON.parse(localStorage.getItem(CATEGORY_KEY)) || [];
+let activePage = localStorage.getItem("activePage") || categories[0]?.id || "";
+
+function getStorageKey() {
+  return `${STORAGE_KEY}-${activePage}`;
+}
 const elements = {
   balanceForm: document.querySelector("#balanceForm"),
   balanceInput: document.querySelector("#balanceInput"),
   balanceError: document.querySelector("#balanceError"),
-
+  pageTabs: document.querySelector("#pageTabs"),
+  categoryInput: document.querySelector("#categoryInput"),
+  addCategoryButton: document.querySelector("#addCategoryButton"),
   expenseForm: document.querySelector("#expenseForm"),
   expenseName: document.querySelector("#expenseName"),
   expenseAmount: document.querySelector("#expenseAmount"),
@@ -21,9 +30,14 @@ const elements = {
   transactionList: document.querySelector("#transactionList"),
   emptyState: document.querySelector("#emptyState"),
   clearAllButton: document.querySelector("#clearAllButton"),
+  resetAllButton: document.querySelector("#resetAllButton"),
 
   todayLabel: document.querySelector("#todayLabel"),
   toast: document.querySelector("#toast"),
+  categoryModal: document.querySelector("#categoryModal"),
+openCategoryModal: document.querySelector("#openCategoryModal"),
+closeCategoryModal: document.querySelector("#closeCategoryModal"),
+currentCategoryName: document.querySelector("#currentCategoryName"),
 };
 
 let appState = loadState();
@@ -35,7 +49,7 @@ let toastTimer;
 
 function loadState() {
   try {
-    const savedData = JSON.parse(localStorage.getItem(STORAGE_KEY));
+    const savedData = JSON.parse(localStorage.getItem(getStorageKey()));
 
     if (
       savedData &&
@@ -77,9 +91,8 @@ function isValidExpense(expense) {
 ========================= */
 
 function saveState() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(appState));
+  localStorage.setItem(getStorageKey(), JSON.stringify(appState));
 }
-
 /* =========================
    ĐỊNH DẠNG TIỀN
 ========================= */
@@ -244,13 +257,12 @@ function render() {
     (total, item) => total + item.amount,
     0
   );
-
   const currentBalance =
     appState.startingBalance - totalExpense;
 
   const hasExpenses =
     appState.expenses.length > 0;
-
+  
   elements.currentBalance.textContent =
     formatMoney(currentBalance);
 
@@ -341,7 +353,8 @@ elements.balanceForm.addEventListener(
 
     elements.balanceError.textContent = "";
 
-    appState.startingBalance = balance;
+    appState.startingBalance += balance;
+    elements.balanceInput.value = "";
 
     saveState();
     render();
@@ -504,6 +517,170 @@ elements.expenseForm.addEventListener(
     elements.expenseError.textContent = "";
   }
 );
+function showCategoryModal() {
+  elements.categoryModal.hidden = false;
+  document.body.classList.add("modal-open");
+  elements.categoryInput.focus();
+}
+
+function hideCategoryModal() {
+  elements.categoryModal.hidden = true;
+  document.body.classList.remove("modal-open");
+}
+
+function saveCategories() {
+  localStorage.setItem(CATEGORY_KEY, JSON.stringify(categories));
+
+  if (activePage) {
+    localStorage.setItem("activePage", activePage);
+  } else {
+    localStorage.removeItem("activePage");
+  }
+}
+
+function openCategory(categoryId) {
+  activePage = categoryId;
+  saveCategories();
+
+  appState = loadState();
+  elements.balanceInput.value = "";
+  elements.expenseForm.reset();
+  elements.expenseDate.value = getLocalDateValue();
+
+  renderCategories();
+  render();
+  hideCategoryModal();
+}
+
+function renderCategories() {
+  elements.pageTabs.innerHTML = "";
+
+  const currentCategory = categories.find(
+    (category) => category.id === activePage
+  );
+
+  elements.currentCategoryName.textContent =
+    currentCategory?.name || "Chưa chọn";
+
+  if (categories.length === 0) {
+    const emptyMessage = document.createElement("p");
+    emptyMessage.className = "category-empty";
+    emptyMessage.textContent = "Chưa có mục nào. Hãy tạo mục đầu tiên.";
+    elements.pageTabs.appendChild(emptyMessage);
+    return;
+  }
+
+  categories.forEach((category) => {
+    const row = document.createElement("div");
+    row.className = "category-row";
+
+    if (category.id === activePage) {
+      row.classList.add("active");
+    }
+
+    const selectButton = document.createElement("button");
+    selectButton.type = "button";
+    selectButton.className = "category-select";
+    selectButton.textContent = category.name;
+
+    selectButton.addEventListener("click", () => {
+      openCategory(category.id);
+    });
+
+    const actions = document.createElement("div");
+    actions.className = "category-actions";
+
+    const renameButton = document.createElement("button");
+    renameButton.type = "button";
+    renameButton.title = "Đổi tên";
+    renameButton.textContent = "✎";
+
+    renameButton.addEventListener("click", () => {
+      const newName = prompt("Nhập tên mới:", category.name)?.trim();
+
+      if (!newName) return;
+
+      category.name = newName;
+      saveCategories();
+      renderCategories();
+      showToast("Đã đổi tên mục.");
+    });
+
+    const deleteButton = document.createElement("button");
+    deleteButton.type = "button";
+    deleteButton.className = "delete-category";
+    deleteButton.title = "Xóa mục";
+    deleteButton.textContent = "×";
+
+    deleteButton.addEventListener("click", () => {
+      if (!confirm(`Xóa mục "${category.name}" và toàn bộ dữ liệu?`)) return;
+
+      localStorage.removeItem(`${STORAGE_KEY}-${category.id}`);
+      categories = categories.filter((item) => item.id !== category.id);
+
+      if (activePage === category.id) {
+        activePage = categories[0]?.id || "";
+        appState = loadState();
+      }
+
+      saveCategories();
+      renderCategories();
+      render();
+      showToast("Đã xóa mục.");
+    });
+
+    actions.append(renameButton, deleteButton);
+    row.append(selectButton, actions);
+    elements.pageTabs.appendChild(row);
+  });
+}
+
+elements.openCategoryModal.addEventListener("click", showCategoryModal);
+elements.closeCategoryModal.addEventListener("click", hideCategoryModal);
+
+elements.categoryModal.addEventListener("click", (event) => {
+  if (event.target === elements.categoryModal) {
+    hideCategoryModal();
+  }
+});
+
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape") {
+    hideCategoryModal();
+  }
+});
+elements.categoryInput.addEventListener("keydown", (event) => {
+  if (event.key === "Enter") {
+    event.preventDefault();
+    elements.addCategoryButton.click();
+  }
+});
+
+elements.addCategoryButton.addEventListener("click", () => {
+  const name = elements.categoryInput.value.trim();
+
+  if (!name) {
+    showToast("Hãy nhập tên mục chi tiêu.");
+    return;
+  }
+
+  const category = {
+    id: `category-${Date.now()}`,
+    name: name,
+  };
+
+  categories.push(category);
+  activePage = category.id;
+
+  localStorage.setItem(CATEGORY_KEY, JSON.stringify(categories));
+  localStorage.setItem("activePage", activePage);
+
+  appState = loadState();
+  elements.categoryInput.value = "";
+
+  renderCategories();
+  render();
+});
 
 /* =========================
    KHỞI TẠO ỨNG DỤNG
@@ -520,15 +697,10 @@ elements.todayLabel.textContent =
 elements.expenseDate.value =
   getLocalDateValue();
 
-elements.balanceInput.value =
-  appState.startingBalance
-    ? groupMoneyDigits(
-        String(appState.startingBalance)
-      )
-    : "";
+elements.balanceInput.value = "";
 
+renderCategories();
 render();
-
 /* =========================
    ĐĂNG KÝ SERVICE WORKER
 ========================= */
@@ -547,4 +719,12 @@ if (
         );
       });
   });
+  elements.resetAllButton.addEventListener("click", () => {
+  if (!confirm("Reset toàn bộ số tiền và khoản chi?")) return;
+  appState = { startingBalance: 0, expenses: [] };
+  saveState();
+  render();
+  elements.balanceInput.value = "";
+  showToast("Đã reset toàn bộ dữ liệu.");
+});
 }

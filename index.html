@@ -27,7 +27,13 @@
         Đã lưu trên thiết bị
       </span>
     </header>
-
+<div class="category-toolbar">
+  <button id="openCategoryModal" class="category-trigger" type="button">
+    ☰ Danh mục chi tiêu
+    <span id="currentCategoryName">Chưa chọn</span>
+  </button>
+</div>
+<nav class="page-tabs" id="pageTabs"></nav>
     <section class="hero" id="top">
       <div>
         <p class="eyebrow">TỔNG QUAN TÀI CHÍNH</p>
@@ -76,11 +82,10 @@
           </div>
           <form id="balanceForm" novalidate>
             <label for="balanceInput">Số tiền hiện có</label>
-            <div class="money-input">
-              <input id="balanceInput" name="balance" type="number" min="0" step="1000"
-                     inputmode="numeric" placeholder="Ví dụ: 5.000.000" required>
+          <div class="money-input">
+            <input id="balanceInput" name="balance" type="text" inputmode="numeric" placeholder="Ví dụ: 5.000.000" autocomplete="off" required>
               <span>VNĐ</span>
-            </div>
+          </div>
             <p class="field-error" id="balanceError" role="alert"></p>
             <button class="button primary" type="submit">Cập nhật số tiền</button>
           </form>
@@ -101,8 +106,7 @@
 
             <label for="expenseAmount">Số tiền đã chi</label>
             <div class="money-input">
-              <input id="expenseAmount" name="amount" type="number" min="1" step="1000"
-                     inputmode="numeric" placeholder="Ví dụ: 50.000" required>
+              <input id="expenseAmount" name="amount" type="text" inputmode="numeric" autocomplete="off" placeholder="Ví dụ: 50.000" required>
               <span>VNĐ</span>
             </div>
 
@@ -141,6 +145,24 @@
       <p>© 2026 Sổ Chi Tiêu</p>
     </footer>
   </main>
+  <div class="category-modal" id="categoryModal" hidden>
+  <section class="category-dialog">
+    <div class="category-dialog-heading">
+      <div>
+        <h2>Danh mục chi tiêu</h2>
+        <p>Chọn, thêm, đổi tên hoặc xóa mục.</p>
+      </div>
+      <button id="closeCategoryModal" class="modal-close" type="button">×</button>
+    </div>
+
+    <div class="category-create">
+      <input id="categoryInput" type="text" maxlength="30" placeholder="Ví dụ: Tiền trọ, du lịch...">
+      <button id="addCategoryButton" class="category-add-button" type="button">＋ Thêm</button>
+    </div>
+
+    <div class="page-tabs" id="pageTabs"></div>
+  </section>
+</div>
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
   <script src="script.js"></script>

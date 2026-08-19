@@ -21,6 +21,8 @@ const elements = {
   expenseError: document.querySelector("#expenseError"),
 
   currentBalance: document.querySelector("#currentBalance"),
+  toolbarBalance: document.querySelector("#toolbarBalance"),
+  drawerBalance: document.querySelector("#drawerBalance"),
   totalExpense: document.querySelector("#totalExpense"),
   transactionCount: document.querySelector("#transactionCount"),
 
@@ -38,6 +40,13 @@ const elements = {
 openCategoryModal: document.querySelector("#openCategoryModal"),
 closeCategoryModal: document.querySelector("#closeCategoryModal"),
 currentCategoryName: document.querySelector("#currentCategoryName"),
+showCategoryListButton: document.querySelector("#showCategoryListButton"),
+showAddCategoryButton: document.querySelector("#showAddCategoryButton"),
+categoryListPanel: document.querySelector("#categoryListPanel"),
+categoryAddPanel: document.querySelector("#categoryAddPanel"),
+balanceModal: document.querySelector("#balanceModal"),
+openBalanceModal: document.querySelector("#openBalanceModal"),
+closeBalanceModal: document.querySelector("#closeBalanceModal"),
 };
 
 let appState = loadState();
@@ -265,6 +274,10 @@ function render() {
   
   elements.currentBalance.textContent =
     formatMoney(currentBalance);
+  elements.toolbarBalance.textContent =
+    formatMoney(currentBalance);
+  elements.drawerBalance.textContent =
+    formatMoney(currentBalance);
 
   elements.totalExpense.textContent =
     formatMoney(totalExpense);
@@ -358,6 +371,7 @@ elements.balanceForm.addEventListener(
 
     saveState();
     render();
+    hideBalanceModal();
 
     showToast("Đã cập nhật số tiền hiện có.");
   }
@@ -436,6 +450,15 @@ elements.expenseForm.addEventListener(
     showToast("Đã thêm khoản chi mới.");
   }
 );
+
+document.querySelector(".expense-suggestions").addEventListener("click", (event) => {
+  const suggestion = event.target.closest("[data-expense-suggestion]");
+  if (!suggestion) return;
+
+  elements.expenseName.value = suggestion.dataset.expenseSuggestion;
+  elements.expenseError.textContent = "";
+  elements.expenseAmount.focus();
+});
 
 /* =========================
    XÓA MỘT KHOẢN CHI
@@ -518,16 +541,48 @@ elements.expenseForm.addEventListener(
   }
 );
 function showCategoryModal() {
-  elements.categoryModal.hidden = false;
+  hideBalanceModal();
+  elements.categoryModal.classList.add("show");
   document.body.classList.add("modal-open");
-  elements.categoryInput.focus();
 }
 
 function hideCategoryModal() {
-  elements.categoryModal.hidden = true;
+  elements.categoryModal.classList.remove("show");
   document.body.classList.remove("modal-open");
 }
 
+document.addEventListener("click", (event) => {
+  const addThousandsButton = event.target.closest("[data-add-thousands]");
+  if (!addThousandsButton) return;
+
+  const input = document.getElementById(addThousandsButton.dataset.addThousands);
+  const currentDigits = getMoneyDigits(input.value);
+
+  if (!currentDigits) {
+    input.focus();
+    showToast("Hãy nhập một con số trước.");
+    return;
+  }
+
+  input.value = `${currentDigits}000`.slice(0, 15);
+  formatMoneyInput(input);
+  input.dispatchEvent(new Event("input", { bubbles: true }));
+  input.focus();
+  input.setSelectionRange(input.value.length, input.value.length);
+});
+function showBalanceModal() {
+  hideCategoryModal();
+  elements.balanceModal.classList.add("show");
+  document.body.classList.add("modal-open");
+  setTimeout(() => elements.balanceInput.focus(), 280);
+}
+
+function hideBalanceModal() {
+  elements.balanceModal.classList.remove("show");
+  if (!elements.categoryModal.classList.contains("show")) {
+    document.body.classList.remove("modal-open");
+  }
+}
 function saveCategories() {
   localStorage.setItem(CATEGORY_KEY, JSON.stringify(categories));
 
@@ -551,7 +606,13 @@ function openCategory(categoryId) {
   render();
   hideCategoryModal();
 }
+function hideCategoryActions() {
+  document.querySelectorAll(".category-row.show-actions").forEach((row) => {
+    row.classList.remove("show-actions");
+  });
+}
 
+document.addEventListener("click", hideCategoryActions);
 function renderCategories() {
   elements.pageTabs.innerHTML = "";
 
@@ -570,9 +631,31 @@ function renderCategories() {
     return;
   }
 
-  categories.forEach((category) => {
+  categories.forEach((category, index) => {
     const row = document.createElement("div");
     row.className = "category-row";
+    row.style.setProperty("--category-index", index);
+    let longPressed = false;
+    let pressTimer;
+
+    row.addEventListener("contextmenu", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      hideCategoryActions();
+      row.classList.add("show-actions");
+    });
+
+    row.addEventListener("touchstart", () => {
+      longPressed = false;
+      pressTimer = setTimeout(() => {
+        longPressed = true;
+        hideCategoryActions();
+        row.classList.add("show-actions");
+      }, 550);
+    }, { passive: true });
+
+    row.addEventListener("touchend", () => clearTimeout(pressTimer));
+    row.addEventListener("touchmove", () => clearTimeout(pressTimer), { passive: true });
 
     if (category.id === activePage) {
       row.classList.add("active");
@@ -581,12 +664,30 @@ function renderCategories() {
     const selectButton = document.createElement("button");
     selectButton.type = "button";
     selectButton.className = "category-select";
-    selectButton.textContent = category.name;
+    const categoryIcon = document.createElement("span");
+    categoryIcon.className = "category-icon";
+    categoryIcon.textContent = category.name.trim().charAt(0).toUpperCase() || "₫";
+
+    const categoryText = document.createElement("span");
+    categoryText.className = "category-text";
+    const categoryTitle = document.createElement("strong");
+    categoryTitle.textContent = category.name;
+    const categoryHint = document.createElement("small");
+    categoryHint.textContent = "Chạm để xem chi tiết";
+    categoryText.append(categoryTitle, categoryHint);
+
+    const categoryArrow = document.createElement("span");
+    categoryArrow.className = "category-arrow";
+    categoryArrow.textContent = "›";
+    selectButton.append(categoryIcon, categoryText, categoryArrow);
 
     selectButton.addEventListener("click", () => {
+      if (longPressed) {
+        longPressed = false;
+        return;
+      }
       openCategory(category.id);
     });
-
     const actions = document.createElement("div");
     actions.className = "category-actions";
 
@@ -636,6 +737,11 @@ function renderCategories() {
 }
 
 elements.openCategoryModal.addEventListener("click", showCategoryModal);
+elements.openBalanceModal.addEventListener("click", showBalanceModal);
+elements.closeBalanceModal.addEventListener("click", hideBalanceModal);
+elements.balanceModal.addEventListener("click", (event) => {
+  if (event.target === elements.balanceModal) hideBalanceModal();
+});
 elements.closeCategoryModal.addEventListener("click", hideCategoryModal);
 
 elements.categoryModal.addEventListener("click", (event) => {
@@ -647,6 +753,7 @@ elements.categoryModal.addEventListener("click", (event) => {
 document.addEventListener("keydown", (event) => {
   if (event.key === "Escape") {
     hideCategoryModal();
+    hideBalanceModal();
   }
 });
 elements.categoryInput.addEventListener("keydown", (event) => {
@@ -681,7 +788,39 @@ elements.addCategoryButton.addEventListener("click", () => {
   renderCategories();
   render();
 });
+function toggleDrawerPanel(panelName) {
+  const isList = panelName === "list";
+  const selectedPanel = isList
+    ? elements.categoryListPanel
+    : elements.categoryAddPanel;
 
+  const shouldOpen = selectedPanel.hidden;
+
+  elements.categoryListPanel.hidden = true;
+  elements.categoryAddPanel.hidden = true;
+
+  elements.showCategoryListButton.classList.remove("active");
+  elements.showAddCategoryButton.classList.remove("active");
+
+  if (shouldOpen) {
+    selectedPanel.hidden = false;
+
+    if (isList) {
+      elements.showCategoryListButton.classList.add("active");
+    } else {
+      elements.showAddCategoryButton.classList.add("active");
+      elements.categoryInput.focus();
+    }
+  }
+}
+
+elements.showCategoryListButton.addEventListener("click", () => {
+  toggleDrawerPanel("list");
+});
+
+elements.showAddCategoryButton.addEventListener("click", () => {
+  toggleDrawerPanel("add");
+});
 /* =========================
    KHỞI TẠO ỨNG DỤNG
 ========================= */

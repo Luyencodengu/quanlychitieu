@@ -27,13 +27,26 @@
         Đã lưu trên thiết bị
       </span>
     </header>
-<div class="category-toolbar">
-  <button id="openCategoryModal" class="category-trigger" type="button">
-    ☰ Danh mục chi tiêu
-    <span id="currentCategoryName">Chưa chọn</span>
+<div class="quick-toolbar">
+  <div class="category-toolbar">
+    <button id="openCategoryModal" class="category-trigger" type="button">
+    <b>☰</b>
+    <span class="category-trigger-copy">
+      <small>DANH MỤC ĐANG CHỌN</small>
+      <strong id="currentCategoryName">Chưa chọn</strong>
+    </span>
+    <i>›</i>
+    </button>
+  </div>
+  <button id="openBalanceModal" class="balance-trigger" type="button">
+    <span class="balance-trigger-icon">₫</span>
+    <span>
+      <small>SỐ DƯ HIỆN TẠI</small>
+      <strong id="toolbarBalance">0 ₫</strong>
+    </span>
+    <i>‹</i>
   </button>
 </div>
-<nav class="page-tabs" id="pageTabs"></nav>
     <section class="hero" id="top">
       <div>
         <p class="eyebrow">TỔNG QUAN TÀI CHÍNH</p>
@@ -74,25 +87,6 @@
       <div class="forms-column">
         <article class="panel">
           <div class="panel-heading">
-            <span class="heading-icon blue" aria-hidden="true">₫</span>
-            <div>
-              <h2>Tiền hiện có</h2>
-              <p>Nhập tổng số tiền bạn đang sở hữu.</p>
-            </div>
-          </div>
-          <form id="balanceForm" novalidate>
-            <label for="balanceInput">Số tiền hiện có</label>
-          <div class="money-input">
-            <input id="balanceInput" name="balance" type="text" inputmode="numeric" placeholder="Ví dụ: 5.000.000" autocomplete="off" required>
-              <span>VNĐ</span>
-          </div>
-            <p class="field-error" id="balanceError" role="alert"></p>
-            <button class="button primary" type="submit">Cập nhật số tiền</button>
-          </form>
-        </article>
-
-        <article class="panel">
-          <div class="panel-heading">
             <span class="heading-icon coral" aria-hidden="true">＋</span>
             <div>
               <h2>Thêm khoản chi</h2>
@@ -103,11 +97,23 @@
             <label for="expenseName">Nội dung chi</label>
             <input id="expenseName" name="name" type="text" maxlength="60"
                    placeholder="Ví dụ: Ăn sáng, đổ xăng..." autocomplete="off" required>
+            <div class="expense-suggestions" aria-label="Gợi ý nội dung chi">
+              <button type="button" data-expense-suggestion="Đi ăn">🍜 <span>Đi ăn</span></button>
+              <button type="button" data-expense-suggestion="Đi chơi">🎡 <span>Đi chơi</span></button>
+              <button type="button" data-expense-suggestion="Mua đồ">🛒 <span>Mua đồ</span></button>
+              <button type="button" data-expense-suggestion="Đi chợ">🥕 <span>Đi chợ</span></button>
+              <button type="button" data-expense-suggestion="Tiền xăng">⛽ <span>Tiền xăng</span></button>
+              <button type="button" data-expense-suggestion="Khác">••• <span>Khác</span></button>
+            </div>
 
             <label for="expenseAmount">Số tiền đã chi</label>
             <div class="money-input">
               <input id="expenseAmount" name="amount" type="text" inputmode="numeric" autocomplete="off" placeholder="Ví dụ: 50.000" required>
               <span>VNĐ</span>
+            </div>
+            <div class="money-suggestion">
+              <small>Nhập nhanh</small>
+              <button type="button" data-add-thousands="expenseAmount">+000</button>
             </div>
 
             <label for="expenseDate">Ngày chi</label>
@@ -145,23 +151,83 @@
       <p>© 2026 Sổ Chi Tiêu</p>
     </footer>
   </main>
-  <div class="category-modal" id="categoryModal" hidden>
-  <section class="category-dialog">
-    <div class="category-dialog-heading">
-      <div>
-        <h2>Danh mục chi tiêu</h2>
-        <p>Chọn, thêm, đổi tên hoặc xóa mục.</p>
+<div class="category-modal" id="categoryModal">
+  <aside class="category-dialog">
+    <div class="drawer-header">
+      <div class="drawer-brand">
+        <span>₫</span>
+        <div>
+          <strong>Sổ Chi Tiêu</strong>
+          <small>Không gian tài chính của bạn</small>
+        </div>
       </div>
+
       <button id="closeCategoryModal" class="modal-close" type="button">×</button>
     </div>
 
-    <div class="category-create">
-      <input id="categoryInput" type="text" maxlength="30" placeholder="Ví dụ: Tiền trọ, du lịch...">
-      <button id="addCategoryButton" class="category-add-button" type="button">＋ Thêm</button>
+    <div class="drawer-intro">
+      <span class="drawer-intro-icon">☷</span>
+      <div>
+        <p>QUẢN LÝ DANH MỤC</p>
+        <h2>Tiền của bạn, theo từng ngăn.</h2>
+      </div>
     </div>
 
-    <div class="page-tabs" id="pageTabs"></div>
-  </section>
+    <button id="showCategoryListButton" class="drawer-menu-item" type="button">
+      <span><i>◈</i> Danh mục chi tiêu</span>
+      <strong>›</strong>
+    </button>
+
+    <div id="categoryListPanel" class="drawer-panel" hidden>
+      <div class="page-tabs" id="pageTabs"></div>
+    </div>
+
+    <button id="showAddCategoryButton" class="drawer-menu-item" type="button">
+      <span><i>+</i> Tạo danh mục mới</span>
+      <strong>＋</strong>
+    </button>
+
+    <div id="categoryAddPanel" class="drawer-panel" hidden>
+      <div class="category-create">
+        <input id="categoryInput" type="text" maxlength="30" placeholder="Tên mục mới...">
+        <button id="addCategoryButton" class="category-add-button" type="button">
+          Thêm mục
+        </button>
+      </div>
+    </div>
+  </aside>
+</div>
+<div class="balance-modal" id="balanceModal">
+  <aside class="balance-dialog">
+    <div class="drawer-header balance-drawer-header">
+      <button id="closeBalanceModal" class="modal-close" type="button">×</button>
+      <div class="drawer-brand">
+        <div>
+          <strong>Số dư hiện tại</strong>
+          <small>Cập nhật nguồn tiền của bạn</small>
+        </div>
+        <span>₫</span>
+      </div>
+    </div>
+    <div class="balance-drawer-body">
+      <p class="balance-kicker">SỐ DƯ KHẢ DỤNG</p>
+      <strong class="balance-drawer-total" id="drawerBalance">0 ₫</strong>
+      <p class="balance-drawer-copy">Nhập số tiền bạn muốn bổ sung vào số dư.</p>
+      <form id="balanceForm" novalidate>
+        <label for="balanceInput">Số tiền bổ sung</label>
+        <div class="money-input">
+          <input id="balanceInput" name="balance" type="text" inputmode="numeric" placeholder="Ví dụ: 5.000.000" autocomplete="off" required>
+          <span>VNĐ</span>
+        </div>
+        <div class="money-suggestion">
+          <small>Nhập nhanh</small>
+          <button type="button" data-add-thousands="balanceInput">+000</button>
+        </div>
+        <p class="field-error" id="balanceError" role="alert"></p>
+        <button class="button primary" type="submit">Cập nhật số tiền</button>
+      </form>
+    </div>
+  </aside>
 </div>
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
